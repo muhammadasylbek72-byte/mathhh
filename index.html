@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Математический квиз</title>
+<style>
+:root{--paper:#fbfbf7;--ink:#1d2a44;--muted:#5b6478;--grid:#e3e8f0;--card:#fff;--line:#c9d1e0;--ok:#1f7a4d;--okbg:#e4f4ea;--bad:#b3261e;--badbg:#fbe8e6;--acc:#2f4fb3}
+@media(prefers-color-scheme:dark){:root{--paper:#141a26;--ink:#e8ecf5;--muted:#9aa5bd;--grid:#1d2535;--card:#1b2333;--line:#334058;--ok:#6fd49b;--okbg:#17332a;--bad:#ff8a80;--badbg:#3a1f22;--acc:#8fa8ff}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:17px/1.55 Georgia,"Times New Roman",serif;color:var(--ink);background:var(--paper);
+background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;min-height:100vh}
+main{max-width:680px;margin:0 auto;padding:24px 16px 56px}
+h1{font-size:2rem;line-height:1.15;margin:8px 0 6px}
+h2{font-size:1.25rem;line-height:1.35;margin:10px 0 14px}
+p{margin:0 0 12px}.muted{color:var(--muted)}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:18px}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.menu{display:grid;gap:10px;margin-top:18px}
+.menu button,.primary{padding:14px 16px;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:10px}
+.menu button:hover{border-color:var(--acc)}
+.menu b{display:block}.menu span{color:var(--muted);font-size:.9rem}
+.primary{background:var(--acc);border-color:var(--acc);color:#fff;text-align:center;font-weight:700;width:100%}
+@media(prefers-color-scheme:dark){.primary{color:#0e1320}}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 16px}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:.9rem;color:var(--muted)}
+.q{font-size:1.2rem;margin-bottom:14px}
+.opts{display:grid;gap:8px;margin-bottom:14px}
+.opt{padding:12px 14px;text-align:left;background:var(--paper);border:1.5px solid var(--line);border-radius:8px}
+.opt:hover:not(:disabled){border-color:var(--acc)}
+.opt:disabled{cursor:default}
+.opt.ok{background:var(--okbg);border-color:var(--ok);color:var(--ok);font-weight:700}
+.opt.bad{background:var(--badbg);border-color:var(--bad);color:var(--bad)}
+.fb{border-left:4px solid var(--bad);background:var(--badbg);padding:12px 14px;border-radius:6px;margin-bottom:14px}
+.fb.good{border-color:var(--ok);background:var(--okbg)}
+.fb h3{margin:0 0 6px;font-size:1rem}.fb p{margin:0 0 8px;white-space:pre-wrap}
+.score{font-size:3.4rem;font-weight:700;line-height:1}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.95rem}
+td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.row{display:grid;gap:10px;margin-top:14px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+// ===== Банки вопросов: q — вопрос, o — варианты, a — индекс верного, e — разбор, t — тема, l — уровень =====
+const BANKS = {
+A: { name: "Набор A", note: "Дроби, уравнения, геометрия, производные, интегралы", q: [
+ {q:"Чему равно 3/4 + 5/8?",o:["11/8","8/12","8/8","15/32"],a:0,t:"Дроби",l:"easy",e:"Приведите к общему знаменателю 8: 3/4 = 6/8. Тогда 6/8 + 5/8 = 11/8. Числители можно складывать только при одинаковых знаменателях — нельзя складывать числители и знаменатели отдельно."},
+ {q:"Решите уравнение: 3x − 7 = 11",o:["x = 4","x = 6","x = −6","x = 18"],a:1,t:"Линейные уравнения",l:"easy",e:"Перенесите −7 вправо: 3x = 11 + 7 = 18. Разделите на 3: x = 6. Проверка: 3·6 − 7 = 11."},
+ {q:"Чему равна площадь круга радиуса 5?",o:["10π","25π","5π","50π"],a:1,t:"Геометрия",l:"easy",e:"S = πr² = π·5² = 25π. 10π — это длина окружности (2πr), а не площадь."},
+ {q:"Цену 80 ₸ повысили на 25%, затем снизили на 20%. Какой стала цена?",o:["85","75","80","100"],a:2,t:"Проценты",l:"medium",e:"80·1,25 = 100. Затем 100·0,8 = 80. Проценты нельзя вычитать друг из друга: 25% и 20% берутся от разных величин."},
+ {q:"Найдите корни уравнения x² − 5x + 6 = 0",o:["−2 и −3","2 и 3","1 и 6","−1 и 6"],a:1,t:"Квадратные уравнения",l:"medium",e:"По теореме Виета: x₁+x₂ = 5, x₁·x₂ = 6. Подходят 2 и 3. Проверка через дискриминант: D = 25 − 24 = 1, x = (5 ± 1)/2."},
+ {q:"Бросают два кубика. Вероятность того, что сумма равна 7?",o:["1/12","7/36","1/6","1/36"],a:2,t:"Вероятность",l:"medium",e:"Всего исходов 6·6 = 36. Сумма 7: (1,6),(2,5),(3,4),(4,3),(5,2),(6,1) — 6 исходов. P = 6/36 = 1/6."},
+ {q:"Чему равно sin 30° + cos 60°?",o:["1/2","√3/2","1","0"],a:2,t:"Тригонометрия",l:"medium",e:"sin 30° = 1/2 и cos 60° = 1/2. Сумма: 1/2 + 1/2 = 1."},
+ {q:"Найдите производную функции f(x) = x²·eˣ",o:["x²·eˣ","2x·eˣ","(x² + 2x)·eˣ","(2x + 1)·eˣ"],a:2,t:"Производные",l:"hard",e:"Правило произведения: (uv)′ = u′v + uv′. u = x², v = eˣ → 2x·eˣ + x²·eˣ = (x² + 2x)eˣ."},
+ {q:"Решите: log₂(x) + log₂(x − 2) = 3",o:["x = −2","x = 4","x = 4 и x = −2","x = 2"],a:1,t:"Логарифмы",l:"hard",e:"Сумма логарифмов = логарифм произведения: x(x − 2) = 2³ = 8 → x² − 2x − 8 = 0 → x = 4 или x = −2. ОДЗ: x > 2, поэтому x = −2 не подходит. Ответ: 4."},
+ {q:"Вычислите интеграл ∫₀^π sin x dx",o:["0","1","π","2"],a:3,t:"Интегралы",l:"hard",e:"Первообразная sin x — это −cos x. Подставляем пределы: −cos π − (−cos 0) = 1 + 1 = 2."}
+]},
+B: { name: "Набор B", note: "Арифметика, системы, прогрессии, комбинаторика, пределы", q: [
+ {q:"Сколько будет 2/3 от числа 45?",o:["15","30","27","35"],a:1,t:"Дроби",l:"easy",e:"45 : 3 = 15 (одна треть), 15·2 = 30."},
+ {q:"Вычислите: 5² − 3·4",o:["88","13","37","−13"],a:1,t:"Порядок действий",l:"easy",e:"Сначала степень и умножение: 25 − 12 = 13. Вариант 88 получается, если вычитать до умножения: (25 − 3)·4."},
+ {q:"Периметр прямоугольника со сторонами 8 и 5?",o:["40","18","13","26"],a:3,t:"Геометрия",l:"easy",e:"P = 2(a + b) = 2(8 + 5) = 26. 40 — это площадь."},
+ {q:"Решите систему: x + y = 10, x − y = 2",o:["x=5, y=5","x=6, y=4","x=7, y=3","x=8, y=2"],a:1,t:"Системы уравнений",l:"medium",e:"Сложите уравнения: 2x = 12 → x = 6. Тогда y = 10 − 6 = 4. Проверка: 6 − 4 = 2."},
+ {q:"Среднее арифметическое чисел 4, 8, 6, 10, 12?",o:["6","9","8","40"],a:2,t:"Статистика",l:"medium",e:"Сумма = 4+8+6+10+12 = 40, чисел 5, среднее = 40 : 5 = 8. 40 — это только сумма."},
+ {q:"Катеты прямоугольного треугольника 5 и 12. Чему равна гипотенуза?",o:["17","13","15","11"],a:1,t:"Теорема Пифагора",l:"medium",e:"c² = 5² + 12² = 25 + 144 = 169, c = 13. 17 = 5 + 12 — сумма катетов, а не гипотенуза."},
+ {q:"Арифметическая прогрессия: a₁ = 3, d = 4. Найдите a₁₀.",o:["43","39","36","40"],a:1,t:"Прогрессии",l:"medium",e:"aₙ = a₁ + (n − 1)d = 3 + 9·4 = 39. Частая ошибка — умножать на n вместо n − 1 (получится 43)."},
+ {q:"Сколькими способами можно выбрать 3 человека из 7?",o:["210","21","35","42"],a:2,t:"Комбинаторика",l:"hard",e:"Порядок не важен, значит сочетания: C(7,3) = 7!/(3!·4!) = (7·6·5)/(3·2·1) = 35. 210 — это размещения A(7,3), где порядок учитывается."},
+ {q:"Найдите производную функции sin(x²)",o:["cos(x²)","2x·sin(x²)","2x·cos(x²)","−2x·cos(x²)"],a:2,t:"Производные",l:"hard",e:"Цепное правило: (f(g(x)))′ = f′(g)·g′. f = sin → cos(x²), g = x² → 2x. Итого 2x·cos(x²)."},
+ {q:"Найдите предел lim (x→0) sin(3x)/x",o:["0","1","3","∞"],a:2,t:"Пределы",l:"hard",e:"Умножим и разделим на 3: 3·sin(3x)/(3x). Так как sin(u)/u → 1 при u → 0, предел равен 3·1 = 3."}
+]}};
+const LV={easy:"Базовый",medium:"Средний",hard:"Сложный"};
+const DESC=[
+ [9,"Продвинутый уровень","Вы уверенно владеете материалом: применяете правила произведения, цепное правило, логарифмы и умеете проверять ОДЗ. Можно переходить к олимпиадным задачам."],
+ [7,"Хороший уровень","Базовые и средние темы освоены. Ошибки чаще возникают в сложных задачах — потренируйте анализ условий и проверку ответа."],
+ [5,"Уровень в развитии","Основы есть, но нужна практика. Разберите темы из списка ниже и повторите формулы."],
+ [0,"Начальный уровень","Не переживайте — вернитесь к определениям и простым примерам, решайте по шагам и проверяйте результат подстановкой."]];
+const $=s=>document.querySelector(s), app=$("#app");
+let Q=[],i=0,score=0,log=[],locked=false;
+const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n};
+const ai=async b=>{const r=await fetch("/.netlify/functions/ai",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});if(!r.ok)throw 0;return r.json()};
+
+function menu(){
+ app.replaceChildren();
+ app.append(el("h1",0,"Математический квиз"),el("p","muted","10 вопросов разной сложности. Верно — идём дальше, неверно — получаете разбор. В конце — баллы и дескрипторы уровня."));
+ const m=el("div","menu");
+ for(const k in BANKS){const b=el("button");b.append(el("b",0,BANKS[k].name),el("span",0,BANKS[k].note));b.onclick=()=>start(BANKS[k].q);m.append(b)}
+ const g=el("button");g.append(el("b",0,"Новый квиз от ИИ"),el("span",0,"Каждый раз новые вопросы (нужен API-ключ на сервере)"));
+ g.onclick=async()=>{g.disabled=true;g.querySelector("span").textContent="ИИ составляет вопросы…";
+  try{const d=await ai({mode:"generate"});const qs=d.questions;
+   if(!Array.isArray(qs)||qs.length<5||!qs.every(x=>x.q&&Array.isArray(x.o)&&x.o.length==4&&x.a>=0&&x.a<4))throw 0;
+   start(qs.slice(0,10).map(x=>({q:x.q,o:x.o,a:x.a,e:x.e||"",t:x.t||"Математика",l:LV[x.l]?x.l:"medium"})));
+  }catch(e){g.disabled=false;g.querySelector("span").textContent="Не вышло составить квиз. Попробуйте ещё раз или выберите готовый набор."}};
+ m.append(g);app.append(m);
+}
+function start(qs){Q=qs;i=0;score=0;log=[];show()}
+function show(){
+ locked=false;const q=Q[i];app.replaceChildren();
+ const meta=el("div","meta");meta.append(el("span",0,`Вопрос ${i+1} из ${Q.length}`),el("span",0,`${LV[q.l]} · ${q.t}`));
+ const bar=el("div","bar");const f=el("i");f.style.width=(i/Q.length*100)+"%";bar.append(f);
+ const card=el("div","card");card.append(el("div","q",q.q));
+ const opts=el("div","opts"),fb=el("div"),btn=el("button","primary hidden","Дальше");
+ q.o.forEach((t,k)=>{const b=el("button","opt",t);b.onclick=()=>answer(k,opts,fb,btn);opts.append(b)});
+ btn.onclick=()=>{i++;i<Q.length?show():finish()};
+ if(i==Q.length-1)btn.textContent="Показать результат";
+ card.append(opts,fb,btn);app.append(meta,bar,card);
+}
+async function answer(k,opts,fb,btn){
+ if(locked)return;locked=true;const q=Q[i],bs=[...opts.children];bs.forEach(b=>b.disabled=true);
+ const ok=k==q.a;bs[q.a].classList.add("ok");if(!ok)bs[k].classList.add("bad");
+ log.push({ok,l:q.l,t:q.t});
+ if(ok){score++;const d=el("div","fb good");d.append(el("h3",0,"Верно!"),el("p",0,q.e));fb.append(d);btn.classList.remove("hidden");return}
+ const d=el("div","fb");d.append(el("h3",0,`Неверно. Правильный ответ: ${q.o[q.a]}`),el("p",0,"Как решать: "+q.e));
+ const a=el("p","muted","ИИ-репетитор разбирает вашу ошибку…");d.append(a);fb.append(d);btn.classList.remove("hidden");
+ try{const r=await ai({mode:"feedback",topic:q.t,question:q.q,options:q.o,chosen:q.o[k],correct:q.o[q.a]});a.className="";a.textContent="Разбор вашей ошибки: "+r.text}
+ catch(e){a.remove()}
+}
+function finish(){
+ app.replaceChildren();const d=DESC.find(x=>score>=x[0]);const c=el("div","card");
+ c.append(el("p","muted","Ваш результат"),el("div","score",`${score} / ${Q.length}`),el("h2",0,d[1]),el("p",0,d[2]));
+ const t=el("table"),h=el("tr");["Уровень","Верно"].forEach(x=>h.append(el("th",0,x)));t.append(h);
+ for(const l in LV){const a=log.filter(x=>x.l==l);if(!a.length)continue;const r=el("tr");r.append(el("td",0,LV[l]),el("td",0,`${a.filter(x=>x.ok).length} из ${a.length}`));t.append(r)}
+ c.append(t);
+ const bad=[...new Set(log.filter(x=>!x.ok).map(x=>x.t))];
+ c.append(el("p",0,bad.length?"Темы для повторения: "+bad.join(", ")+".":"Все темы освоены — ошибок нет."));
+ const row=el("div","row"),again=el("button","primary","Пройти другой квиз"),rep=el("button","menu opt","Повторить этот квиз");
+ rep.className="opt";again.onclick=menu;rep.onclick=()=>start(Q);row.append(again,rep);c.append(row);app.append(c);
+}
+menu();
+</script>
+</body>
+</html>
